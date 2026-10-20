@@ -1,0 +1,66 @@
+def readi(filename="lab2.txt"):
+    with open(filename) as f:
+        n = int(f.readline())
+        
+        main_diag  = []   
+        lower_diag = []  
+        upper_diag = []  
+        
+        for i in range(n):
+            row = list(map(float, f.readline().split()))
+            if i > 0:
+                lower_diag.append(row[i - 1])
+            else:
+                lower_diag.append(0.0)  
+            
+            main_diag.append(row[i])
+            
+            if i < n - 1:
+                upper_diag.append(row[i + 1])
+            else:
+                upper_diag.append(0.0)   
+        
+        b = list(map(float, f.readline().split()))
+    
+    return n, main_diag, lower_diag, upper_diag, b
+
+def algo (n, main, lower, upper, b):
+    alfa = [0.0] * n
+    beta = [0.0] * n
+    alfa[0] = (-1)* (upper[0] / main[0])
+    beta[0] = b[0] / main[0]
+    for i in range(1, n):
+        k = main[i] + lower[i] * alfa[i - 1]
+        alfa[i] = (-1) * (upper[i] / k)
+        beta[i] = (b[i] - lower[i] * beta[i - 1]) / k
+
+    return alfa, beta
+
+def ans(n, alfa, beta):
+    x = [0.0] * n
+    x[n - 1] = beta[n - 1]
+    for i in range(n - 2, -1, -1):
+        x[i] = alfa[i] * x[i + 1] + beta[i]
+
+    return x
+
+def main():
+    n, main_d, low_d, up_d, b = readi("lab2.txt")
+    alfa, beta = algo(n, main_d, low_d, up_d, b)
+    x = ans(n, alfa, beta)
+        
+    print("n     =", n)
+    print("main  =", main_d)
+    print("lower =", low_d)
+    print("upper =", up_d)
+    print("b     =", b)
+    print("alfa     =", alfa)
+    print("beta     =", beta)
+    print("x     =", x)
+    
+if __name__ == "__main__":
+    main()
+
+
+   
+            
