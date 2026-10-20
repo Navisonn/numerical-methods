@@ -1,0 +1,231 @@
+import numpy as np  
+
+def readi(filename="lab4.txt"):
+    with open(filename) as f:
+        n = int(f.readline())
+        A = []
+        for i in range(n):
+            row = list(map(float, f.readline().split()))
+            A.append(row)
+    return n, A
+
+
+def build_E(n):
+    E = []
+    for i in range(n):
+        row = []
+        for j in range(n):
+            if i == j:
+                row.append(1.0)
+            else:
+                row.append(0.0)
+        E.append(row)
+    return E
+
+
+def multi_matrix(A, B):
+    n = len(A)
+    m = len(B[0])
+    k = len(B)
+    C = []
+    for i in range(n):
+        row = []
+        for j in range(m):
+            s = 0.0
+            for t in range(k):
+                s += A[i][t] * B[t][j]
+            row.append(s)
+        C.append(row)
+    return C
+
+
+def sub_vec(a, b):
+    res = []
+    for i in range(len(a)):
+        res.append(a[i] - b[i])
+    return res
+
+
+def len_vec(x):
+    s = 0.0
+    for elem in x:
+        s += elem * elem
+    return s
+
+
+def multi_vec(v):
+    n = len(v)
+    M = []
+    for i in range(n):
+        row = []
+        for j in range(n):
+            row.append(v[i] * v[j])
+        M.append(row)
+    return M
+
+
+def multi_nummatrix(A, k):
+    n = len(A)
+    res = []
+    for i in range(n):
+        row = []
+        for j in range(n):
+            row.append(A[i][j] * k)
+        res.append(row)
+    return res
+
+
+def mul_vecnum(v, k):
+    res = []
+    for x in v:
+        res.append(x * k)
+    return res
+
+
+def sub_matrix(A, B):
+    n = len(A)
+    C = []
+    for i in range(n):
+        row = []
+        for j in range(n):
+            row.append(A[i][j] - B[i][j])
+        C.append(row)
+    return C
+
+
+def build_Q(A):
+    n = len(A)
+    Q = build_E(n)
+    R = []
+    for i in range(n):
+        R.append(A[i][:])
+
+    for i in range(n - 1):
+        E = build_E(n - i)
+        x = []
+        for j in range(i, n):
+            x.append(R[j][i])
+
+        sign = 1
+        if x[0] < 0:
+            sign = -1
+
+        len_x = len_vec(x) ** 0.5
+        e_i = [0.0] * (n - i)
+        e_i[0] = 1.0
+
+        v = sub_vec(x, mul_vecnum(e_i, sign * len_x))
+        vtv = len_vec(v)
+        if vtv < 1e-14:
+            continue
+        vvt = multi_vec(v)
+
+        H_small = sub_matrix(E, multi_nummatrix(vvt, 2.0 / vtv))
+        H = build_E(n)
+        for a in range(n - i):
+            for b in range(n - i):
+                H[i + a][i + b] = H_small[a][b]
+
+        R = multi_matrix(H, R)
+        Q = multi_matrix(Q, H)
+    return Q, R
+
+
+def max_offdiag(A):
+    n = len(A)
+    m = 0.0
+    for i in range(1, n):
+        for j in range(i):
+            if abs(A[i][j]) > m:
+                m = abs(A[i][j])
+    return m
+
+
+def algo(A, e, max_iter):
+    A_k = []
+    for i in range(len(A)):
+        A_k.append(A[i][:])
+
+    for _ in range(max_iter):
+        Q, R = build_Q(A_k)
+        A_k = multi_matrix(R, Q)
+        if max_offdiag(A_k) < e:
+            break
+    return A_k
+
+
+def find_lambda(A_k, e):
+    n = len(A_k)
+    values = []
+    i = 0
+    while i < n:
+        if i < n - 1 and abs(A_k[i + 1][i]) > e:
+            a = A_k[i][i]
+            b = A_k[i][i + 1]
+            c = A_k[i + 1][i]
+            d = A_k[i + 1][i + 1]
+
+            tr = a + d
+            det = a * d - b * c
+            disc = tr * tr - 4.0 * det
+
+            if disc >= 0:
+                l1 = (tr + disc ** 0.5) / 2.0
+                l2 = (tr - disc ** 0.5) / 2.0
+                values.append(l1)
+                values.append(l2)
+            else:
+                re = tr / 2.0
+                im = (-disc) ** 0.5 / 2.0
+                values.append(complex(re, im))
+                values.append(complex(re, -im))
+            i += 2
+        else:
+            values.append(A_k[i][i])
+            i += 1
+    return values
+
+
+def print_matrix(A):
+    for row in A:
+        line = ""
+        for x in row:
+            line += f"{x:10.6f} "
+        print(line)
+
+
+def main():
+    n, A = readi("lab4.txt")
+    e = 0.01
+    max_iter = 1000
+    print("n     =", n)
+    print("A     =")
+    print_matrix(A)
+    print()
+    Q, R = build_Q(A)
+    print("Q     =")
+    print_matrix(Q)
+    print("R     =")
+    print_matrix(R)
+    QR = multi_matrix(Q, R)
+    print("Q * R =")
+    print_matrix(QR)
+    print()
+    A_k = algo(A, e, max_iter)
+    print("A_k   =")
+    print_matrix(A_k)
+    print()
+    lam = find_lambda(A_k, e)
+    print("Собственные значения:")
+    for i in range(len(lam)):
+        if isinstance(lam[i], complex):
+            print(f"l{i + 1} = {lam[i].real:.6f} {lam[i].imag:+.6f}i")
+        else:
+            print(f"l{i + 1} = {lam[i]:.6f}")
+    print()
+
+    print("numpy :", np.linalg.eigvals(np.array(A, dtype=float)))
+
+
+if __name__ == "__main__":
+    main()
