@@ -1,0 +1,150 @@
+def readi(filename="lab4.txt"):
+    with open(filename, "r") as f:
+        lines = [line.strip() for line in f if line.strip()]
+
+    n = int(lines[0])
+    a = [list(map(float, lines[i].split())) for i in range(1, n + 1)]
+    lenofmatrix = len(a)
+
+    return a, lenofmatrix
+
+
+def new_matrix(n, m, fill=0.0):
+    matrix = []
+    for i in range(n):
+        row = []
+        for j in range(m):
+            row.append(fill)
+        matrix.append(row)
+    return matrix
+
+
+def identity(n):
+    matrix = new_matrix(n, n, fill=0.0)
+    for i in range(n):
+        matrix[i][i] = 1.0
+    return matrix
+
+
+def maxoffdiag(a, n):
+    maxelem = 0.0
+    for i in range(n):
+        for j in range(n):
+            if i != j:
+                if abs(a[i][j]) > maxelem:
+                    maxelem = abs(a[i][j])
+    return maxelem
+
+
+def rotation(a, n, eps):
+    v = identity(n)
+    count = 0
+
+    while True:
+        for i in range(n):
+            for j in range(i + 1, n):
+                if a[i][j] == 0:
+                    continue
+
+                q = (a[j][j] - a[i][i]) / (2.0 * a[i][j])
+                if q < 0:
+                    sign = -1
+                else:
+                    sign = 1
+                t = sign / (abs(q) + (q ** 2 + 1.0) ** 0.5)
+                c = 1.0 / ((1.0 + t ** 2) ** 0.5)
+                s = t * c
+
+                a[i][i] = a[i][i] - t * a[i][j]
+                a[j][j] = a[j][j] + t * a[i][j]
+                a[i][j] = 0.0
+                a[j][i] = 0.0
+
+                for k in range(n):
+                    if k != i and k != j:
+                        a_ik = a[i][k]
+                        a_jk = a[j][k]
+                        a[i][k] = c * a_ik - s * a_jk
+                        a[j][k] = c * a_jk + s * a_ik
+                        a[k][i] = a[i][k]
+                        a[k][j] = a[j][k]
+
+                for k in range(n):
+                    v_ik = v[k][i]
+                    v_jk = v[k][j]
+                    v[k][i] = c * v_ik - s * v_jk
+                    v[k][j] = c * v_jk + s * v_ik
+
+                count = count + 1
+
+        maxelem = maxoffdiag(a, n)
+        if maxelem < eps:
+            break
+
+    return a, v, count
+
+
+def multiply(x, y, n):
+    res = new_matrix(n, n, fill=0.0)
+    for i in range(n):
+        for j in range(n):
+            for k in range(n):
+                res[i][j] = res[i][j] + x[i][k] * y[k][j]
+    return res
+
+
+def maxdiff(x, y, n):
+    maxelem = 0.0
+    for i in range(n):
+        for j in range(n):
+            d = abs(x[i][j] - y[i][j])
+            if d > maxelem:
+                maxelem = d
+    return maxelem
+
+
+def printmatrix(matrix):
+    for row in matrix:
+        print([round(x, 10) for x in row])
+
+
+def main():
+    a, n = readi("lab4.txt")
+    eps = 10 ** (-12)
+    a_work = [row[:] for row in a]
+
+    print("n =", n)
+    print("eps =", eps)
+    print("a =")
+    printmatrix(a)
+    print()
+    res, v, count = rotation(a_work, n, eps)
+    print("Итераций", count)
+    print()
+    print("Собственные значения:")
+    print([round(res[i][i], 10) for i in range(n)])
+    print()
+    print("Собственные векторы (по столбцам):")
+    for i in range(n):
+        print([round(v[j][i], 10) for j in range(n)])
+    print()
+    print("Матрица собственных векторов v =")
+    printmatrix(v)
+    print()
+    av = multiply(a, v, n)
+    va = multiply(v, res, n)
+    print("Проверка a * v = v * A_diag")
+    print("a * v =")
+    printmatrix(av)
+    print("v * A_diag =")
+    printmatrix(va)
+    err = maxdiff(av, va, n)
+    print("max|a * v - v * A_diag| =", err)
+    if err < 1e-6:
+        print("vse ok")
+    else:
+        print("ne ok")
+
+
+if __name__ == "__main__":
+    main()
