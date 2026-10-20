@@ -1,0 +1,194 @@
+def readi(filename="lab1.txt"):
+    with open(filename, "r") as f:
+        lines = [line.strip() for line in f if line.strip()]
+
+    n = int(lines[0])
+    a = [list(map(float, lines[i].split())) for i in range(1, n + 1)]
+    b = list(map(float, lines[n + 1].split()))
+    lenofmatrix = len(a)
+
+    return a, b, lenofmatrix
+
+
+def new_matrix(n, m, fill=0.0):
+    matrix = []
+    for i in range(n):
+        row = []
+        for j in range(m):
+            row.append(fill)
+        matrix.append(row)
+    return matrix
+
+def identity(n):
+    matrix = new_matrix(n, n, fill=0.0)
+    for i in range(n):
+        matrix[i][i] = 1.0
+    return matrix
+
+
+def lu_decompose(a, lenofmatrix):
+    n = lenofmatrix
+    swap = 0
+    l = identity(n)
+    u = [row[:] for row in a]
+
+    perm = []
+    for i in range(n):
+        perm.append(i)
+
+    for k in range(n - 1):
+        maxelem = abs(u[k][k])
+        maxinrow = k
+        for i in range(k + 1, n):
+            if abs(u[i][k]) > maxelem:
+                maxelem = abs(u[i][k])
+                maxinrow = i
+
+        if maxinrow != k:
+            for j in range(n):
+                tmp = u[k][j]
+                u[k][j] = u[maxinrow][j]
+                u[maxinrow][j] = tmp
+
+            for j in range(k):
+                tmp = l[k][j]
+                l[k][j] = l[maxinrow][j]
+                l[maxinrow][j] = tmp
+
+            tmp = perm[k]
+            perm[k] = perm[maxinrow]
+            perm[maxinrow] = tmp
+            swap = swap + 1
+
+        for i in range(k + 1, n):
+            mu = u[i][k] / u[k][k]
+            l[i][k] = mu
+            for j in range(k, n):
+                u[i][j] = u[i][j] - mu * u[k][j]
+
+    return l, u, perm, swap
+
+
+def multiply(l, u, lenofmatrix):
+    lu = new_matrix(lenofmatrix, lenofmatrix, fill=0.0)
+    for i in range(lenofmatrix):
+        for j in range(lenofmatrix):
+            for k in range(lenofmatrix):
+                lu[i][j] = lu[i][j] + l[i][k] * u[k][j]
+    return lu
+
+
+def lufsol(b, perm, lenofmatrix, l):
+    n = lenofmatrix
+
+    bperm = []
+    for i in range(n):
+        bperm.append(b[perm[i]])
+
+    y = []
+    for i in range(n):
+        q = bperm[i]
+        for j in range(i):
+            q = q - l[i][j] * y[j]
+        y.append(q)
+
+    return y
+
+
+def lubsol(lenofmatrix, u, y):
+    n = lenofmatrix
+
+    x = []
+    for i in range(n):
+        x.append(0.0)
+
+    for i in range(n - 1, -1, -1):
+        q = y[i]
+        for j in range(i + 1, n):
+            q = q - u[i][j] * x[j]
+        q = q / u[i][i]
+        x[i] = q
+
+    return x
+
+def luinverse(l, u, perm, n):
+    ainv = new_matrix(n, n, fill=0.0)
+
+    for j in range(n):
+        e = []
+        for i in range(n):
+            if i == j:
+                e.append(1.0)
+            else:
+                e.append(0.0)
+
+        y = lufsol(e, perm, n, l)
+        x = lubsol(n, u, y)
+
+        for i in range(n):
+            ainv[i][j] = x[i]
+
+    return ainv
+
+def detofmatrix (matrix, swap, n):
+    p = 1
+    det = 1
+    for i in range (n):
+         p = p * matrix[i][i]
+    det = p
+    if (swap % 2 == 1):
+        det = det * (-1)
+
+    return det
+
+def printmatrix(matrix):
+    for row in matrix:
+        print([round(x, 10) for x in row])
+
+def pmatrix(perm, n):
+    E = identity(n)                               
+    P = new_matrix(n, n, fill=0.0)                
+    for i in range(n):
+        for j in range(n):
+            P[i][j] = E[perm[i]][j]                 
+    return P
+
+
+def main():
+    a, b, n = readi("lab1.txt")
+    l, u, perm, s = lu_decompose(a, n)
+    lu = multiply(l, u, n)
+    ainv = luinverse(l, u, perm, n)
+    det = detofmatrix (u, s, n)
+    e = multiply(a, ainv, n)
+    p = pmatrix(perm, n)
+    pa = multiply(p, a, n)
+
+    print("n =", n)
+    print("a =")
+    printmatrix(a)
+    print("b =", b)
+    print("l =")
+    printmatrix(l)
+    print("u =")
+    printmatrix(u)
+    print("lu =")
+    printmatrix(lu)
+    print("pa =")
+    printmatrix(pa)
+    print("a^(-1) =")
+    printmatrix(ainv)
+    print("p =")
+    printmatrix(p)
+    print("perm =", perm)
+    print("det a =", det)
+    print("a * a^(-1) =")
+    printmatrix(e)
+
+    y = lufsol(b, perm, n, l)
+    x = lubsol(n, u, y)
+    print("x =", x)
+
+
+if __name__ == "__main__":
+    main()
