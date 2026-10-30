@@ -1,0 +1,177 @@
+
+import matplotlib.pyplot as plt
+import numpy as np
+import math
+
+
+def f1(x1, x2):
+    return x1**2 + x2**2 - 9
+
+
+def f2(x1, x2):
+    return x1 - math.exp(x2) + 3
+
+
+def jakoby(x1, x2):
+    j = [[0.0] * 2 for i in range(2)]
+    j[0][0] = 2 * x1
+    j[0][1] = 2 * x2
+    j[1][0] = 1
+    j[1][1] = -math.exp(x2)
+    return j
+
+
+def krammer(a, b):
+    det = a[0][0] * a[1][1] - a[0][1] * a[1][0]
+
+    if abs(det) < 1e-12:
+        raise ValueError("Определитель равен нулю")
+
+    dx1 = (b[0] * a[1][1] - b[1] * a[0][1]) / det
+    dx2 = (a[0][0] * b[1] - a[1][0] * b[0]) / det
+
+    return dx1, dx2
+
+
+def newton(x1, x2, e, maxiter):
+    history = []
+
+    for i in range(maxiter):
+        fx1 = f1(x1, x2)
+        fx2 = f2(x1, x2)
+        j = jakoby(x1, x2)
+        b = [-fx1, -fx2]
+        dx1, dx2 = krammer(j, b)
+        x1new = x1 + dx1
+        x2new = x2 + dx2
+        dif = max(abs(dx1), abs(dx2))
+        history.append((i, x1, x2, fx1, fx2, dx1, dx2, dif))
+
+        if dif < e:
+            return [x1new, x2new], history
+
+        x1 = x1new
+        x2 = x2new
+
+    print("Метод не сошелся")
+    return [x1, x2], history
+
+
+def primeiter(x1, x2, e, maxiter):
+    history = []
+
+    for i in range(maxiter):
+        if 9 - x2**2 < 0 or x1 + 3 <= 0:
+            print("Выход за область определения")
+            return [x1, x2], history
+
+        x1new = math.sqrt(9 - x2**2)
+        x2new = math.log(x1 + 3)
+
+        dif = max(abs(x1new - x1), abs(x2new - x2))
+
+        history.append((i, x1, x2, x1new, x2new, dif))
+
+        if dif < e:
+            return [x1new, x2new], history
+
+        x1 = x1new
+        x2 = x2new
+
+    print("Метод итераций не сошелся")
+    return [x1, x2], history
+
+
+def printnewton(history):
+    print("k | x1 | x2 | f1 | f2 | dx1 | dx2 | dif")
+
+    for i, x1, x2, fx1, fx2, dx1, dx2, dif in history:
+        print(i, round(x1, 10), round(x2, 10),
+              round(fx1, 10), round(fx2, 10),
+              round(dx1, 10), round(dx2, 10),
+              round(dif, 10))
+
+
+def printiter(history):
+    print("k | x1 | x2 | x1new | x2new | dif")
+
+    for i, x1, x2, x1new, x2new, dif in history:
+        print(i, round(x1, 10), round(x2, 10),
+              round(x1new, 10), round(x2new, 10),
+              round(dif, 10))
+
+
+def graph():
+    x2 = np.linspace(0, 3, 1000)
+    x1 = np.sqrt(9 - x2**2)
+    x2e = np.linspace(0, math.log(6), 1000)
+    x1e = np.exp(x2e) - 3
+    plt.figure(figsize=(10, 6))
+    plt.plot(x1, x2, label="x1^2 + x2^2 = 9")
+    plt.plot(x1e, x2e, label="x1 = exp(x2) - 3")
+    plt.xlabel("x1")
+    plt.ylabel("x2")
+    plt.title("График системы уравнений")
+    plt.grid(True)
+    plt.legend()
+    plt.show()
+
+
+def grapherror(hnewton, hiter, root):
+    x1 = []
+    y1 = []
+    x2 = []
+    y2 = []
+
+    for i, a, b, f1val, f2val, dx1, dx2, dif in hnewton:
+        x1.append(i + 1)
+        err = max(abs(a + dx1 - root[0]),
+                  abs(b + dx2 - root[1]))
+        y1.append(max(err, 1e-16))
+
+    for i, a, b, anew, bnew, dif in hiter:
+        x2.append(i + 1)
+        err = max(abs(anew - root[0]),
+                  abs(bnew - root[1]))
+        y2.append(max(err, 1e-16))
+
+    plt.figure(figsize=(10, 5))
+    plt.semilogy(x1, y1, marker="o", label="Метод Ньютона")
+    plt.semilogy(x2, y2, marker="o", label="Метод простых итераций")
+
+    plt.xlabel("Количество итераций")
+    plt.ylabel("Погрешность")
+    plt.title("Зависимость погрешности от количества итераций")
+    plt.grid(True)
+    plt.legend()
+    plt.show()
+
+
+def main():
+    e = float(input("Введите точность: "))
+
+    x1 = 2.5
+    x2 = 1.7
+    maxiter = 100
+    graph()
+    root1, hnewton = newton(x1, x2, e, maxiter)
+    root2, hiter = primeiter(x1, x2, e, maxiter)
+    print("Метод Ньютона:")
+    printnewton(hnewton)
+    print("Корень =", root1)
+    print("Количество итераций =", len(hnewton))
+    print("Невязка =", max(abs(f1(root1[0], root1[1])),
+                            abs(f2(root1[0], root1[1]))))
+    print()
+    print("Метод простых итераций:")
+    printiter(hiter)
+    print("Корень =", root2)
+    print("Количество итераций =", len(hiter))
+    print("Невязка =", max(abs(f1(root2[0], root2[1])),
+                            abs(f2(root2[0], root2[1]))))
+    root, history = newton(x1, x2, 1e-14, maxiter)
+    grapherror(hnewton, hiter, root)
+
+
+if __name__ == "__main__":
+    main()
