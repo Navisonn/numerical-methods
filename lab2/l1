@@ -1,0 +1,127 @@
+import matplotlib.pyplot as plt
+import numpy as np
+
+def f(x):
+    return np.log(x + 1) - 2 * x**2 + 1
+
+def df(x):
+    return 1 / (x + 1) - 4 * x
+
+def newton(x0, e, maxiter):
+    x = x0
+    history = []
+    for i in range(maxiter):
+        fx = f(x)
+        dfx = df(x)
+
+        if abs(dfx) < 1e-12:
+            return x, history
+
+        xnew = x - fx / dfx
+        dif = abs(xnew - x)
+        history.append((i, x, fx, dfx, xnew, dif))
+        if dif < e:
+            return xnew, history
+        x = xnew
+
+    print("Метод не сошелся")
+    return x, history
+
+
+def primeiter(x0, e, maxiter, lam):
+    x = x0
+    history = []
+
+    for i in range(maxiter):
+        fx = f(x)
+        xnew = x + lam * fx
+        dif = abs(xnew - x)
+        history.append((i, x, fx, xnew, dif))
+        if dif < e:
+            return xnew, history
+        x = xnew
+
+    print("Метод итераций не сошелся")
+    return x, history
+
+
+def printnewton(history):
+    print("k | x | f(x) | f'(x) | xnew | dif")
+
+    for i, x, fx, dfx, xnew, dif in history:
+        print(i, round(x, 10), round(fx, 10),
+              round(dfx, 10), round(xnew, 10), round(dif, 10))
+
+
+def printiter(history):
+    print("k | x | f(x) | xnew | dif")
+
+    for i, x, fx, xnew, dif in history:
+        print(i, round(x, 10), round(fx, 10),
+              round(xnew, 10), round(dif, 10))
+
+
+def graph():
+    x = np.linspace(-0.9, 1.5, 1000)
+    y = f(x)
+
+    plt.figure(figsize=(10, 5))
+    plt.plot(x, y)
+    plt.axhline(0, color="black")
+    plt.grid(True)
+    plt.xlabel("x")
+    plt.ylabel("f(x)")
+    plt.title("График функции")
+    plt.show()
+
+
+def grapherror(hnewton, hiter, root):
+    x1 = []
+    y1 = []
+    x2 = []
+    y2 = []
+
+    for i, x, fx, dfx, xnew, dif in hnewton:
+        x1.append(i + 1)
+        y1.append(abs(xnew - root))
+
+    for i, x, fx, xnew, dif in hiter:
+        x2.append(i + 1)
+        y2.append(abs(xnew - root))
+
+    plt.figure(figsize=(10, 5))
+    plt.semilogy(x1, y1, marker="o", label="Метод Ньютона")
+    plt.semilogy(x2, y2, marker="o", label="Метод простых итераций")
+    plt.xlabel("Количество итераций")
+    plt.ylabel("Погрешность")
+    plt.title("Зависимость погрешности от количества итераций")
+    plt.grid(True)
+    plt.legend()
+    plt.show()
+
+
+def main():
+    e = float(input("Введите точность: "))
+    x0 = 1.0
+    maxiter = 100
+    lam = 0.25
+    graph()
+    root1, hnewton = newton(x0, e, maxiter)
+    root2, hiter = primeiter(x0, e, maxiter, lam)
+    print("Метод Ньютона:")
+    printnewton(hnewton)
+    print("Корень =", root1)
+    print("Количество итераций =", len(hnewton))
+    print("Невязка =", abs(f(root1)))
+    print()
+    print("Метод простых итераций:")
+    printiter(hiter)
+    print("Корень =", root2)
+    print("Количество итераций =", len(hiter))
+    print("Невязка =", abs(f(root2)))
+    root, history = newton(x0, 1e-14, maxiter)
+    grapherror(hnewton, hiter, root)
+
+
+if __name__ == "__main__":
+    main()
